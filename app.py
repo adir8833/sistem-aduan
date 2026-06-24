@@ -1,5 +1,5 @@
 import streamlit as str
-import google.generativeai as genai
+import google-generativeai>=0.8.0 as genai
 from pypdf import PdfReader
 
 # REKABENTUK ANTARAMUKA (INTERFACE)
