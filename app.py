@@ -1,4 +1,4 @@
-mport streamlit as str
+import streamlit as str
 import google.generativeai as genai
 from pypdf import PdfReader
 
