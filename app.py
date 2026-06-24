@@ -12,9 +12,6 @@ if "GEMINI_API_KEY" in str.secrets:
     api_key = str.secrets["GEMINI_API_KEY"]
 else:
     api_key = str.sidebar.text_input("Masukkan Gemini API Key anda:", type="password")
-    api_key = st.secrets[""]
-else:
-    api_key = st.sidebar.text_input("Masukkan Gemini API Key anda:", type="password")
 
 str.sidebar.markdown("---")
 str.sidebar.write("### 📁 Langkah 1: Muat Naik Rujukan")
