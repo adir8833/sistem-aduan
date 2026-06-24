@@ -1,6 +1,13 @@
 import streamlit as str
 import google.generativeai as genai
-from pypdf import PdfReader
+import os
+
+# Ambil API key dari rahsia (Secrets)
+api_key = os.environ.get("GEMINI_API_KEY")
+genai.configure(api_key=api_key)
+
+# Initialize model (Tanpa sebarang versi v1beta)
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 # REKABENTUK ANTARAMUKA (INTERFACE)
 str.set_page_config(page_title="Sistem Penilaian Aduan AI", layout="wide")
