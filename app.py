@@ -9,7 +9,7 @@ str.write("Sistem pembantu harian untuk menilai aduan berdasarkan buku undang-un
 
 # MASUKKAN KUNCI API
 if "GEMINI_API_KEY" in st.secrets:
-    api_key = st.secrets["GEMINI_API_KEY"]
+    api_key = st.secrets[""]
 else:
     api_key = st.sidebar.text_input("Masukkan Gemini API Key anda:", type="password")
 
