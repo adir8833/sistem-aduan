@@ -74,5 +74,5 @@ with kolum_kanan:
                     str.markdown(respons.text)
                     
                 except Exception as e:
-                    str.error(f"Berlaku ralat: {str(e)}")
+                    error(f"Berlaku ralat: {str(e)}")
                     
