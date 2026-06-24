@@ -8,7 +8,10 @@ str.title("📋 Sistem Pemantauan & Penilaian Aduan")
 str.write("Sistem pembantu harian untuk menilai aduan berdasarkan buku undang-undang.")
 
 # MASUKKAN KUNCI API
-api_key = str.sidebar.text_input("Masukkan Gemini API Key anda:", type="password")
+if "GEMINI_API_KEY" in st.secrets:
+    api_key = st.secrets["GEMINI_API_KEY"]
+else:
+    api_key = st.sidebar.text_input("Masukkan Gemini API Key anda:", type="password")
 
 str.sidebar.markdown("---")
 str.sidebar.write("### 📁 Langkah 1: Muat Naik Rujukan")
