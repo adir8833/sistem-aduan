@@ -1,85 +1,55 @@
 import streamlit as st
 import google.generativeai as genai
 import os
+from pypdf import PdfReader
 
-# Ambil API key dari rahsia (Secrets)
-api_key = os.environ.get("GEMINI_API_KEY")
-genai.configure(api_key=api_key)
+# 1. Tetapan Halaman
+st.set_page_config(page_title="Sistem Aduan", layout="wide")
+st.title("📋 Sistem Pemantauan & Penilaian Aduan")
 
-# Initialize model (Tanpa sebarang versi v1beta)
-model = genai.GenerativeModel('gemini-1.5-flash')
+# 2. Kotak Sidebar (API Key & PDF)
+with st.sidebar:
+    st.header("Konfigurasi")
+    api_key = st.text_input("Masukkan Gemini API Key:", type="password")
+    buku_pdf = st.file_uploader("Muat naik Buku Undang-Undang (PDF)", type=["pdf"])
 
-# REKABENTUK ANTARAMUKA (INTERFACE)
-str.set_page_config(page_title="Sistem Penilaian Aduan AI", layout="wide")
-str.title("📋 Sistem Pemantauan & Penilaian Aduan")
-str.write("Sistem pembantu harian untuk menilai aduan berdasarkan buku undang-undang.")
+# 3. Lajur Input & Hasil AI
+col1, col2 = st.columns(2)
 
-# MASUKKAN KUNCI API
-if "GEMINI_API_KEY" in str.secrets:
-    api_key = str.secrets["GEMINI_API_KEY"]
-else:
-    api_key = str.sidebar.text_input("Masukkan Gemini API Key anda:", type="password")
+with col1:
+    st.write("### 📝 Kemasukan Aduan Baru")
+    aduan = st.text_area("Tampal aduan di sini:", height=200)
+    hantar = st.button("🚀 NILAI ADUAN SEKARANG")
 
-str.sidebar.markdown("---")
-str.sidebar.write("### 📁 Langkah 1: Muat Naik Rujukan")
-buku_pdf = str.sidebar.file_uploader("Muat naik Buku Undang-Undang (PDF)", type=["pdf"])
-
-# BAHAGIAN UTAMA SISTEM
-kolum_kiri, kolum_kanan = str.columns(2)
-
-with kolum_kiri:
-    str.subheader("📝 Kemasukan Aduan Baru")
-    teks_aduan = str.text_area("Tampal (Paste) teks aduan di sini:", height=250)
-    butang_nilai = str.button("🚀 NILAI ADUAN SEKARANG")
-
-with kolum_kanan:
-    str.subheader("🔍 Hasil Penilaian AI")
-    
-    if butang_nilai:
+with col2:
+    st.write("### 🔍 Hasil Penilaian AI")
+    if hantar:
         if not api_key:
-            str.error("Sila masukkan API Key anda di bahagian tepi kiri dahulu!")
+            st.error("Sila masukkan API Key di sidebar sebelah kiri!")
         elif not buku_pdf:
-            str.error("Sila muat naik fail PDF undang-undang rujukan anda dahulu!")
-        elif not teks_aduan:
-            str.error("Sila masukkan teks aduan untuk dinilai!")
+            st.warning("Sila muat naik fail PDF rujukan terlebih dahulu!")
+        elif not aduan:
+            st.warning("Sila masukkan teks aduan!")
         else:
-            with str.spinner("AI sedang membaca undang-undang dan menilai aduan... Sila tunggu."):
+            with st.spinner("AI sedang membaca dokumen & menilai aduan..."):
                 try:
-                    # 1. Baca fail PDF undang-undang
-                    pembaca_pdf = PdfReader(buku_pdf)
-                    teks_undang_undang = ""
-                    # Ambil 50 muka surat pertama dahulu supaya proses laju & tak hantar data terlalu besar
-                    for i in range(min(50, len(pembaca_pdf.pages))):
-                        teks_undang_undang += pembaca_pdf.pages[i].extract_text()
-                    
-                    # 2. Set up AI
+                    # Konfigurasi AI
                     genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-1.5-flash-latest')
+                    model = genai.GenerativeModel('gemini-1.5-flash')
                     
-                    # 3. Arahan kepada AI (Prompt)
-                    arahan = f"""
-                    Anda adalah seorang pakar undang-undang dan pegawai penilai aduan yang sangat teliti.
-                    Tugasan anda adalah membantu pengguna menilai aduan berdasarkan teks undang-undang yang disediakan di bawah.
+                    # Baca PDF
+                    reader = PdfReader(buku_pdf)
+                    konteks = ""
+                    for page in reader.pages:
+                        t = page.extract_text()
+                        if t: 
+                            konteks += t
                     
-                    RUJUKAN UNDANG-UNDANG:
-                    {teks_undang_undang[:30000]} 
+                    # Hantar ke Gemini
+                    prompt = f"Rujukan Undang-Undang:\n{konteks[:40000]}\n\nAduan:\n{aduan}\n\nSila berikan penilaian dalam Bahasa Melayu."
+                    respon = model.generate_content(prompt)
                     
-                    ADUAN PENGGUNA:
-                    {teks_aduan}
-                    
-                    Sila berikan penilaian anda dalam format berikut (gunakan tulisan tebal/bold untuk tajuk):
-                    1. **Cadangan Akta & Seksyen yang Berkaitan**: Sebutkan nama akta dan seksyen spesifik yang menyentuh kesalahan dalam aduan ini berdasarkan rujukan yang diberi.
-                    2. **Justifikasi / Ulasan Penilaian**: Terangkan secara ringkas mengapa seksyen ini dipilih berdasarkan fakta aduan.
-                    3. **Syor Tindakan**: Apakah maklumat tambahan atau semakan yang perlu dilakukan oleh pegawai untuk mengesahkan aduan ini.
-                    
-                    Jawab dalam Bahasa Melayu yang profesional dan mudah difahami. Jangan reka maklumat jika tiada dalam rujukan.
-                    """
-                    
-                    # 4. Jana jawapan
-                    respons = model.generate_content(arahan)
-                    str.success("Penilaian Selesai!")
-                    str.markdown(respons.text)
-                    
+                    st.success("Penilaian Selesai!")
+                    st.write(respon.text)
                 except Exception as e:
-                    str.error(f"Berlaku ralat: {e}")
-                    
+                    st.error(f"Berlaku ralat: {e}")
