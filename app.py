@@ -1,72 +1,61 @@
 import streamlit as st
-import google.generativeai as genai
-import os
-from pypdf import PdfReader
+import requests
+import json
 
-# 1. Tetapan Halaman
-st.set_page_config(page_title="Sistem Aduan AI", layout="wide")
+# Tetapan paparan penuh
+st.set_page_config(page_title="Sistem Penilaian Aduan", layout="wide")
+
+# 1. SIDEBAR KIRI (KONFIGURASI)
+st.sidebar.title("Konfigurasi")
+api_key = st.sidebar.text_input("Masukkan Gemini API Key anda:", type="password")
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("📁 Langkah 1: Muat Naik Rujukan")
+uploaded_file = st.sidebar.file_uploader("Muat naik Buku Undang-Undang (PDF)", type=["pdf"])
+if uploaded_file:
+    st.sidebar.caption("200MB per file • PDF")
+
+# 2. KAWASAN UTAMA (KANAN)
 st.title("📋 Sistem Pemantauan & Penilaian Aduan")
 st.write("Sistem pembantu harian untuk menilai aduan berdasarkan buku undang-undang.")
 
-# 2. Kotak Sidebar (API Key & PDF)
-with st.sidebar:
-    st.header("Konfigurasi")
-    api_key = st.text_input("Masukkan Gemini API Key anda:", type="password")
-    st.markdown("---")
-    st.write("### 📁 Langkah 1: Muat Naik Rujukan")
-    buku_pdf = st.file_uploader("Muat naik Buku Undang-Undang (PDF)", type=["pdf"])
-
-# 3. Lajur Input & Hasil AI
 col1, col2 = st.columns(2)
 
 with col1:
-    st.write("### 📝 Kemasukan Aduan Baru")
-    aduan = st.text_area("Tampal aduan di sini:", height=200)
-    hantar = st.button("🚀 NILAI ADUAN SEKARANG")
+    st.markdown("### 📝 Kemasukan Aduan Baru")
+    aduan_text = st.text_area("Tampal aduan di sini:", height=300, placeholder="Taip atau tampal kes aduan di sini...")
+    btn_nilai = st.button("🚀 NILAI ADUAN SEKARANG")
 
 with col2:
-    st.write("### 🔍 Hasil Penilaian AI")
-    if hantar:
+    st.markdown("### 🔍 Hasil Penilaian AI")
+    
+    if btn_nilai:
         if not api_key:
-            st.error("Sila masukkan API Key di sidebar sebelah kiri!")
-        elif not buku_pdf:
-            st.warning("Sila muat naik fail PDF rujukan terlebih dahulu!")
-        elif not aduan:
-            st.warning("Sila masukkan teks aduan!")
+            st.error("Sila masukkan API Key di sidebar kiri terlebih dahulu!")
+        elif not aduan_text:
+            st.error("Sila masukkan teks aduan!")
         else:
-            with st.spinner("AI sedang membaca dokumen & menilai aduan..."):
+            with st.spinner("AI sedang menilai aduan, sila tunggu..."):
+                # Menggunakan jalan raya v1 yang stabil agar tidak keluar ralat 404
+                url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
+                headers = {"Content-Type": "application/json"}
+                
+                prompt_penuh = f"Anda adalah pakar undang-undang. Sila nilaikan aduan berikut secara rasmi dan jelas dalam Bahasa Melayu serta berikan cadangan tindakan:\n\n{aduan_text}"
+                
+                payload = {
+                    "contents": [{
+                        "parts": [{"text": prompt_penuh}]
+                    }]
+                }
+                
                 try:
-                    # Konfigurasi API
-                    genai.configure(api_key=api_key)
+                    response = requests.post(url, headers=headers, data=json.dumps(payload))
+                    res_json = response.json()
                     
-                    # Baca fail PDF
-                    reader = PdfReader(buku_pdf)
-                    konteks = ""
-                    for page in reader.pages:
-                        t = page.extract_text()
-                        if t: 
-                            konteks += t
-                    
-                    # Arahan untuk AI
-                    prompt = f"Rujukan Undang-Undang:\n{konteks[:40000]}\n\nAduan:\n{aduan}\n\nSila berikan penilaian dalam Bahasa Melayu."
-                    
-                    # --- SISTEM ANTI-RALAT AUTOMATIK ---
-                    # Cuba guna model flash biasa dulu
-                    try:
-                        model = genai.GenerativeModel('gemini-1.5-flash')
-                        respon = model.generate_content(prompt)
-                    except Exception:
-                        # Jika sangkut ralat v1beta, dia automatik tukar ke model backup ini
-                        try:
-                            model = genai.GenerativeModel('gemini-1.5-flash-latest')
-                            respon = model.generate_content(prompt)
-                        except Exception:
-                            # Pilihan terakhir jika pelayan terlalu lama (legacy)
-                            model = genai.GenerativeModel('gemini-pro')
-                            respon = model.generate_content(prompt)
-                    
-                    st.success("Penilaian Selesai!")
-                    st.write(respon.text)
-                    
+                    if response.status_code == 200:
+                        output_text = res_json['candidates'][0]['content']['parts'][0]['text']
+                        st.markdown(output_text)
+                    else:
+                        st.error(f"Ralat API ({response.status_code}): {response.text}")
                 except Exception as e:
-                    st.error(f"Berlaku ralat sistem: {e}")
+                    st.error(f"Ralat Sistem: {str(e)}")
