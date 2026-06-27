@@ -36,9 +36,10 @@ with col2:
             st.error("Sila masukkan teks aduan!")
         else:
             with st.spinner("AI sedang menilai aduan, sila tunggu..."):
-                # Menggunakan jalan raya v1 yang stabil agar tidak keluar ralat 404
-               url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key={api_key}"
+                # Menggunakan jalan raya v1 dengan model gemini-2.0-flash yang stabil
+                url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key={api_key}"
                 headers = {"Content-Type": "application/json"}
+                
                 prompt_penuh = f"Anda adalah pakar undang-undang. Sila nilaikan aduan berikut secara rasmi dan jelas dalam Bahasa Melayu serta berikan cadangan tindakan:\n\n{aduan_text}"
                 
                 payload = {
